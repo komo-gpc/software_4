@@ -3,30 +3,38 @@
 #include<string.h>
 #include<time.h>
 
+/*構造体定義*/
 struct word_d
 {
+	/*ナンバー*/
 	int num;
+	/*英文*/
 	char eng[15];
+	/*日本語分*/
 	char jp[15];
 };
-
+/*プロトタイプ宣言*/
 void shuffle(char [][99], int);
-int check_answer(char [][99],struct word_d[],int,int);
+int check_answer(char [][99],struct word_d[],int,int,int);
 void display(char [][99],int,int);
 
 int main()
 {
-	int wide,high,size,item;
-	int i,a,a1;
+	int i,j,ans,ans1;
+	/*正答率計算用変数*/
+	float cnt,bans;
 	
-	item = 4;	//単語数
-	size = item *2 ;	//枠の数
-	wide = 3;	//横幅
-	high = 3;	//高さ
+	const int item = 4;	//単語数
+	const int wide = 3;	//横幅。文字サイズにもよるが5ぐらいがデフォルトだと限界？
+	const int high = 3;	//高さ
+	const int size = item *2 ;	//枠の数。基本単語数の2倍?
 	
+	char str[size][99];	//一時保存用配列
 	
+	/*構造体配列*/
 	struct word_d word[item];
 	
+	/*テスト用データ入力*/
 	strcpy(word[0].eng,"cat");
 	strcpy(word[0].jp,"猫");
 	strcpy(word[1].eng,"dog");
@@ -36,31 +44,30 @@ int main()
 	strcpy(word[3].eng,"picture");
 	strcpy(word[3].jp,"写真");
 	
+	/*枠番号代入*/
 	for(i=0;i<item;i++)
 	{
 		word[i].num=i;
 	}
 	
-	char str1[size][99];
+	j=0;
+	/*一時保存用配列への入力*/
+	for(i=0;i<item;i++)
+	{
+		strcpy(str[j],word[i].eng);
+		j++;
+		strcpy(str[j],word[i].jp);
+		j++;
+	}
 	
-	
-	
-	strcpy(str1[0],"cat");
-	strcpy(str1[2],"dog");
-	strcpy(str1[4],"fish");
-	strcpy(str1[6],"picture");
-	strcpy(str1[1],"猫");
-	strcpy(str1[3],"犬");
-	strcpy(str1[5],"魚");
-	strcpy(str1[7],"写真");
-
-	shuffle(str1,size);
+	/*シャッフル*/
+	shuffle(str,size);
 	
 	/*乱数設定*/
-	//srand((unsigned)time(NULL));
-	//乱数のシードを現在時刻を用いて設定
-	//printf("%d\n",RAND_MAX);
 	/*
+	srand((unsigned)time(NULL));
+	乱数のシードを現在時刻を用いて設定
+	printf("%d\n",RAND_MAX);
 	srand((unsigned)time(NULL));
 	for(i=0;i<100;i++)
 	{
@@ -69,86 +76,123 @@ int main()
 	printf("\n");
 	
 	
-	2147483647.0
+	2147483647.0	//学校環境でのRAND_MAX(?)
 	*/
-	
-	display(str1,wide,high);
-	
-	i=0;
-	while(i!=item)
+
+	/*メイン実行部*/
+	i=cnt=bans=0;
+	/*i=itemの時、全問正解*/
+	while(i<item)
 	{
-		printf("答えを入力してください");
-		scanf("%d %d",&a,&a1);
-		switch(check_answer(str1,word,a,a1))
+		/*表示*/
+		display(str,wide,high);
+		printf("答えを入力してください\n");
+		while(1)
 		{
-			case 0:	//正解
+			/*解答読み込み*/
+			scanf("%d %d",&ans,&ans1);
+			if(ans<1 || ans>(size) || ans1<1 || ans1>(size))
+			{
+				printf("入力が不正です。もう一度入力してください。\n");
+			}else break;
+		}
+		cnt++;
+		switch(check_answer(str,word,ans,ans1,size))
+		{
+			/*正解*/
+			case 0:
 				printf("正解です\n");
-				strcpy(str1[a-1],"---");
-				strcpy(str1[a1-1],"---");
+				/*正解した単語を消す*/
+				strcpy(str[ans-1],"---");
+				strcpy(str[ans1-1],"---");
 				i++;
 				break;
-			case 1:	//不正解
+				
+			/*不正解*/
+			case 1:	
 				printf("間違いです\n");
+				bans++;
 				break;
+				
+			/*check_answerでのerror*/
 			case 2:
 				printf("check error\n");
+				cnt--;
 				break;
+				
 			default:
 				printf("switch error\n");
+				cnt--;
 				break;
 		}
-		display(str1,wide,high);
 	}
+	printf("おめでとう！正答率は%.1f%%です",100*(1-(bans/cnt)));
+	
 	/*
 	・表示問題の抽出(重み付け?)
 	・表示配列の構造体化？
 	・正解確認方法
 	・終了後サイン
 	・幅調整
+	・メモリ関連。動的確保
+	・同じ行に表示？
+	・不正入力対策
+	
 	*/
 	return 0;
 }
 
-
-void shuffle(char array[][99],int size)
+/*シャッフル関数
+Fisher-Yates法
+出た乱数の配列から順に外側の配列と入れ替えていく*/
+void shuffle(char str[][99],int size)
 {
 	int i=size;
 	while(i>1)
 	{
+		/*現在時刻からの乱数生成*/
 		srand((unsigned)time(NULL));
-		//乱数生成
+		/*乱数
+		この書き方は簡単だが一桁目の数字が同じ数(すう)の数(かず)にはわずかに差があるため、厳密性に欠ける。
+		(int)(rand()*((double)[欲しい乱数の幅(size)]/(double)RAND_MAX))
+		だと厳密である？*/
 		int j = rand() % i; //厳密性に欠ける書き方
 		i--;
-		//退避
+		/*退避用配列*/
 		char t[10];
-		strcpy(t,array[i]);
-		strcpy(array[i],array[j]);
-		strcpy(array[j],t);
+		strcpy(t,str[i]);
+		strcpy(str[i],str[j]);
+		strcpy(str[j],t);
 	}
 }
 
-int check_answer(char str[][99],struct word_d word[],int a,int a1)
+/*正解確認関数*/
+int check_answer(char str[][99],struct word_d word[],int ans,int ans1,int size)
 {
 	int i;
-	for(i=0;i<4;i++)
+	for(i=0;i<size;i++)
 	{
-		
-		if(strcmp(str[a-1],word[i].eng)==0)
+		/*回答と同じ文字列を一時保存用配列から探す。
+		一致したものが見つかれば、次は二番目の配列と英文(日本語分)を比較。
+		一致した場合正解,不一致なら不正解とし、一時保存用配列から一致するものが見つからなかった場合はエラーを返す*/
+		if(strcmp(str[ans-1],word[i].eng)==0)
 		{
-			if(strcmp(str[a1-1],word[i].jp)==0)
+			if(strcmp(str[ans1-1],word[i].jp)==0)
 				return 0;	//正解
 			else return 1;	//不正解
-		}else if(strcmp(str[a-1],word[i].jp)==0)
+		}else if(strcmp(str[ans-1],word[i].jp)==0)
 		{
-			if(strcmp(str[a1-1],word[i].eng)==0)
+			if(strcmp(str[ans1-1],word[i].eng)==0)
 				return 0;
 			else return 1;
 		}
 	}
 	
-	return 2;
+	return 2;	//エラー
 }
 
+/*表示用関数
+説明は面倒なので気が向いたら。アルゴリズムもクソもない*/
 void display(char str[][99],int wide,int high)
 {
 	int i,l,m,j;
