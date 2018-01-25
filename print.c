@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<sys/time.h>
 #include<time.h>
 
 /*構造体定義*/
@@ -9,14 +10,19 @@ struct word_d
 	/*ナンバー*/
 	int num;
 	/*英文*/
-	char eng[15];
+	char eng[256];
 	/*日本語分*/
-	char jp[15];
+	char jp[256];
 };
+struct timeval s,e;
+
 /*プロトタイプ宣言*/
 void shuffle(char [][99], int);
 int check_answer(char [][99],struct word_d[],int,int,int);
 void display(char [][99],int,int);
+void timer();
+void file(struct word_d[]);
+
 
 int main()
 {
@@ -32,9 +38,14 @@ int main()
 	char str[size][99];	//一時保存用配列
 	
 	/*構造体配列*/
-	struct word_d word[item];
+	struct word_d word[256];
+	
+	file(word);
+	gettimeofday(&s,NULL);
+	
 	
 	/*テスト用データ入力*/
+	/*
 	strcpy(word[0].eng,"cat");
 	strcpy(word[0].jp,"猫");
 	strcpy(word[1].eng,"dog");
@@ -43,12 +54,12 @@ int main()
 	strcpy(word[2].jp,"魚");
 	strcpy(word[3].eng,"picture");
 	strcpy(word[3].jp,"写真");
-	
+	*/
 	/*枠番号代入*/
-	for(i=0;i<item;i++)
+	/*for(i=0;i<item;i++)
 	{
 		word[i].num=i;
-	}
+	}*/
 	
 	j=0;
 	/*一時保存用配列への入力*/
@@ -87,6 +98,7 @@ int main()
 		/*表示*/
 		display(str,wide,high);
 		printf("答えを入力してください\n");
+		fflush(stdout);
 		while(1)
 		{
 			/*解答読み込み*/
@@ -94,6 +106,7 @@ int main()
 			if(ans<1 || ans>(size) || ans1<1 || ans1>(size))
 			{
 				printf("入力が不正です。もう一度入力してください。\n");
+				fflush(stdout);
 			}else break;
 		}
 		cnt++;
@@ -102,6 +115,7 @@ int main()
 			/*正解*/
 			case 0:
 				printf("正解です\n");
+				fflush(stdout);
 				/*正解した単語を消す*/
 				strcpy(str[ans-1],"---");
 				strcpy(str[ans1-1],"---");
@@ -111,22 +125,27 @@ int main()
 			/*不正解*/
 			case 1:	
 				printf("間違いです\n");
+				fflush(stdout);
 				bans++;
 				break;
 				
 			/*check_answerでのerror*/
 			case 2:
 				printf("check error\n");
+				fflush(stdout);
 				cnt--;
 				break;
 				
 			default:
 				printf("switch error\n");
+				fflush(stdout);
 				cnt--;
 				break;
 		}
 	}
-	printf("おめでとう！正答率は%.1f%%です",100*(1-(bans/cnt)));
+	printf("おめでとう！正答率は%.1f%%です\n",100*(1-(bans/cnt)));
+	fflush(stdout);
+	timer();
 	
 	/*
 	・表示問題の抽出(重み付け?)
@@ -159,7 +178,7 @@ void shuffle(char str[][99],int size)
 		int j = rand() % i; //厳密性に欠ける書き方
 		i--;
 		/*退避用配列*/
-		char t[10];
+		char t[99];
 		strcpy(t,str[i]);
 		strcpy(str[i],str[j]);
 		strcpy(str[j],t);
@@ -232,4 +251,82 @@ void display(char str[][99],int wide,int high)
 			printf("*\n");
 		}
 	}
+	fflush(stdout);
+}
+
+void file(struct word_d word[]){
+	FILE *fp;
+	FILE *fo;
+	int k,l,m,n,num,i,j;
+	char filename[256];
+	char rireki[256][256];
+	char c;
+	i=0;
+	j=l=m=0;
+	printf("\n");
+	fflush(stdout);
+	fo=fopen("rireki.txt","a+");
+	while(1){
+		c=fgetc(fo);
+		if(c==EOF)break;
+		if(c=='\n'){
+			m=0;
+			l++;
+		}else{
+			rireki[l][m]=c;
+			m++;
+		}
+	}
+
+	printf("入力するファイルの番号を選択してください\n");
+	printf("\n");
+	fflush(stdout);
+	for(n=0;n<l;n++){
+		printf("%d %s\n",n+1,rireki[n]);
+	}
+	printf("%d 新規ファイル\n",n+1);
+	printf("%d 履歴を削除\n",n+2);
+	printf("\n");
+	fflush(stdout);
+	scanf("%d",&num);
+	if(num==l+1){
+		scanf("%s",filename);
+		fprintf(fo,"%s\n",filename);
+		fflush(stdout);
+	}else if(num==l+2){
+		fclose(fo);
+		fo=fopen("rireki.txt","w");
+	}else{
+		strcpy(filename,rireki[num-1]);
+	}
+	fclose(fo);
+	fp=fopen(filename,"r");
+	if(fp == NULL){
+   		printf("ファイルが開けません\n");
+   		fflush(stdout);
+		exit(1);
+ 	 }
+	for(;;){
+		word[i].num = i+1;
+		if(fscanf(fp,"%[^,],%s",word[i].eng,word[i].jp)==EOF){
+			//breakまで,と改行を区切りに文字を配列へ挿入
+			i--;
+			fclose(fp);
+			break;
+		}else{
+			if(word[i].eng[0]=='\n'){
+				for(k=0;k<255;k++){
+					word[i].eng[k]=word[i].eng[k+1];
+				}
+			}//改行が配列の先頭に入り出力にバグが起きるめ先頭を消去
+			i++;
+			//j++;
+		}
+	}
+}
+
+void timer(){
+	gettimeofday(&e, NULL);
+	printf("time = %.2f\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+	fflush(stdout);
 }
