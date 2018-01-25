@@ -1,3 +1,11 @@
+/*
+・表示問題の抽出(重み付け?)
+・幅調整
+・メモリ関連。動的確保
+・同じ行に表示？
+*/
+
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -14,7 +22,7 @@ struct word_d
 	/*日本語分*/
 	char jp[256];
 };
-struct timeval s,e;
+struct timeval start,end;
 
 /*プロトタイプ宣言*/
 void shuffle(char [][99], int);
@@ -40,26 +48,7 @@ int main()
 	/*構造体配列*/
 	struct word_d word[256];
 	
-	file(word);
-	gettimeofday(&s,NULL);
-	
-	
-	/*テスト用データ入力*/
-	/*
-	strcpy(word[0].eng,"cat");
-	strcpy(word[0].jp,"猫");
-	strcpy(word[1].eng,"dog");
-	strcpy(word[1].jp,"犬");
-	strcpy(word[2].eng,"fish");
-	strcpy(word[2].jp,"魚");
-	strcpy(word[3].eng,"picture");
-	strcpy(word[3].jp,"写真");
-	*/
-	/*枠番号代入*/
-	/*for(i=0;i<item;i++)
-	{
-		word[i].num=i;
-	}*/
+	file(word);	
 	
 	j=0;
 	/*一時保存用配列への入力*/
@@ -92,6 +81,8 @@ int main()
 
 	/*メイン実行部*/
 	i=cnt=bans=0;
+	
+	gettimeofday(&start,NULL);
 	/*i=itemの時、全問正解*/
 	while(i<item)
 	{
@@ -147,17 +138,6 @@ int main()
 	fflush(stdout);
 	timer();
 	
-	/*
-	・表示問題の抽出(重み付け?)
-	・表示配列の構造体化？
-	・正解確認方法
-	・終了後サイン
-	・幅調整
-	・メモリ関連。動的確保
-	・同じ行に表示？
-	・不正入力対策
-	
-	*/
 	return 0;
 }
 
@@ -254,79 +234,99 @@ void display(char str[][99],int wide,int high)
 	fflush(stdout);
 }
 
-void file(struct word_d word[]){
+void file(struct word_d word[])
+{
 	FILE *fp;
 	FILE *fo;
-	int k,l,m,n,num,i,j;
+	
+	int k,l,m,n,i;
+	int num;
 	char filename[256];
 	char rireki[256][256];
 	char c;
-	i=0;
-	j=l=m=0;
+	i=l=m=0;
+	
 	printf("\n");
 	fflush(stdout);
 	fo=fopen("rireki.txt","a+");
-	while(1){
+	while(1)
+	{
 		c=fgetc(fo);
-		if(c==EOF)break;
-		if(c=='\n'){
+		if(c==EOF) break;
+		if(c=='\n')
+		{
 			m=0;
 			l++;
-		}else{
+		}else
+		{
 			rireki[l][m]=c;
 			m++;
 		}
 	}
 
-	printf("入力するファイルの番号を選択してください\n");
-	printf("\n");
+	printf("入力するファイルの番号を選択してください\n\n");
 	fflush(stdout);
-	for(n=0;n<l;n++){
+	
+	for(n=0;n<l;n++)
+	{
 		printf("%d %s\n",n+1,rireki[n]);
 	}
-	printf("%d 新規ファイル\n",n+1);
-	printf("%d 履歴を削除\n",n+2);
-	printf("\n");
+	
+	printf("%d 新規ファイル\n%d 履歴を削除\n\n",n+1,n+2);
 	fflush(stdout);
+	
 	scanf("%d",&num);
-	if(num==l+1){
+	
+	if(num==l+1)
+	{
 		scanf("%s",filename);
 		fprintf(fo,"%s\n",filename);
 		fflush(stdout);
-	}else if(num==l+2){
+	}else if(num==l+2)
+	{
 		fclose(fo);
 		fo=fopen("rireki.txt","w");
-	}else{
+	}else
+	{
 		strcpy(filename,rireki[num-1]);
 	}
+	
 	fclose(fo);
+	
 	fp=fopen(filename,"r");
-	if(fp == NULL){
+	if(fp == NULL)
+	{
    		printf("ファイルが開けません\n");
    		fflush(stdout);
 		exit(1);
  	 }
-	for(;;){
+ 	 
+	for(;;)
+	{
 		word[i].num = i+1;
-		if(fscanf(fp,"%[^,],%s",word[i].eng,word[i].jp)==EOF){
+		if(fscanf(fp,"%[^,],%s",word[i].eng,word[i].jp)==EOF)
+		{
 			//breakまで,と改行を区切りに文字を配列へ挿入
 			i--;
 			fclose(fp);
 			break;
-		}else{
-			if(word[i].eng[0]=='\n'){
-				for(k=0;k<255;k++){
-					word[i].eng[k]=word[i].eng[k+1];
-				}
-			}//改行が配列の先頭に入り出力にバグが起きるめ先頭を消去
+		}else if(word[i].eng[0]=='\n')
+		{
+			for(k=0;k<255;k++)
+			{
+				word[i].eng[k]=word[i].eng[k+1];
+			}
+			//改行が配列の先頭に入り出力にバグが起きるため先頭を消去
 			i++;
-			//j++;
 		}
 	}
 }
 
-void timer(){
-	gettimeofday(&e, NULL);
-	printf("time = %.2f\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+
+
+void timer()
+{
+	gettimeofday(&end, NULL);
+	printf("かかった時間は%.2f秒です。\n", (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1.0E-6);
 	fflush(stdout);
 }
