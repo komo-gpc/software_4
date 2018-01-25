@@ -3,6 +3,7 @@
 ・幅調整
 ・メモリ関連。動的確保
 ・同じ行に表示？
+・行数カウント関数か？
 */
 
 
@@ -22,14 +23,16 @@ struct word_d
 	/*日本語分*/
 	char jp[256];
 };
+/*時間計測用構造体*/
 struct timeval start,end;
 
 /*プロトタイプ宣言*/
-void shuffle(char [][99], int);
+void shuffle_ch(char [][99], int);
+void shuffle_num(int [],int);
 int check_answer(char [][99],struct word_d[],int,int,int);
 void display(char [][99],int,int);
 void timer();
-void file(struct word_d[]);
+void file(FILE **,struct word_d[]);
 
 
 int main()
@@ -37,31 +40,58 @@ int main()
 	int i,j,ans,ans1;
 	/*正答率計算用変数*/
 	float cnt,bans;
+	FILE *fp;
 	
 	const int item = 4;	//単語数
 	const int wide = 3;	//横幅。文字サイズにもよるが5ぐらいがデフォルトだと限界？
 	const int high = 3;	//高さ
 	const int size = item *2 ;	//枠の数。基本単語数の2倍?
-	
+	int read_item;	//読み取った単語数
+	int temp[item];
 	char str[size][99];	//一時保存用配列
 	
 	/*構造体配列*/
 	struct word_d word[256];
 	
-	file(word);	
+	file(&fp,word);
+	
+	/*行数カウント*/
+	char buf[256];
+	int line=0;
+	rewind(fp);
+	while(fgets(buf,256,fp)!=NULL)
+	{
+		line++;
+	}
+	read_item=line;
+	
+	srand((unsigned)time(NULL));
+	for(i=0;i<item;i++)
+	{
+		temp[i]=(int)(rand()*(double)read_item/(double)RAND_MAX);
+		for(j=i-1;j>-1;j--)
+		{
+			if(temp[i]==temp[j])
+			{
+				i--;
+			}
+		}
+	}
+	
+	//shuffle_num(temp,item);
 	
 	j=0;
 	/*一時保存用配列への入力*/
 	for(i=0;i<item;i++)
 	{
-		strcpy(str[j],word[i].eng);
+		strcpy(str[j],word[temp[i]].eng);
 		j++;
-		strcpy(str[j],word[i].jp);
+		strcpy(str[j],word[temp[i]].jp);
 		j++;
 	}
 	
 	/*シャッフル*/
-	shuffle(str,size);
+	shuffle_ch(str,size);
 	
 	/*乱数設定*/
 	/*
@@ -101,7 +131,7 @@ int main()
 			}else break;
 		}
 		cnt++;
-		switch(check_answer(str,word,ans,ans1,size))
+		switch(check_answer(str,word,ans,ans1,read_item))
 		{
 			/*正解*/
 			case 0:
@@ -144,7 +174,7 @@ int main()
 /*シャッフル関数
 Fisher-Yates法
 出た乱数の配列から順に外側の配列と入れ替えていく*/
-void shuffle(char str[][99],int size)
+void shuffle_ch(char str[][99],int size)
 {
 	int i=size;
 	while(i>1)
@@ -162,6 +192,21 @@ void shuffle(char str[][99],int size)
 		strcpy(t,str[i]);
 		strcpy(str[i],str[j]);
 		strcpy(str[j],t);
+	}
+}
+
+void shuffle_num(int num[],int size)
+{
+	int i=size;
+	while(i>1)
+	{
+		srand((unsigned)time(NULL));
+		int j = rand() % i;
+		i--;
+		int k;
+		k=num[i];
+		num[i]=num[j];
+		num[j]=k;
 	}
 }
 
@@ -234,9 +279,8 @@ void display(char str[][99],int wide,int high)
 	fflush(stdout);
 }
 
-void file(struct word_d word[])
+void file(FILE **fp,struct word_d word[])
 {
-	FILE *fp;
 	FILE *fo;
 	
 	int k,l,m,n,i;
@@ -293,8 +337,8 @@ void file(struct word_d word[])
 	
 	fclose(fo);
 	
-	fp=fopen(filename,"r");
-	if(fp == NULL)
+	*fp=fopen(filename,"r");
+	if(*fp == NULL)
 	{
    		printf("ファイルが開けません\n");
    		fflush(stdout);
@@ -304,11 +348,11 @@ void file(struct word_d word[])
 	for(;;)
 	{
 		word[i].num = i+1;
-		if(fscanf(fp,"%[^,],%s",word[i].eng,word[i].jp)==EOF)
+		if(fscanf(*fp,"%[^,],%s",word[i].eng,word[i].jp)==EOF)
 		{
 			//breakまで,と改行を区切りに文字を配列へ挿入
 			i--;
-			fclose(fp);
+			//fclose(fp);
 			break;
 		}else if(word[i].eng[0]=='\n')
 		{
