@@ -46,29 +46,30 @@ int main()
 	const int wide = 3;	//横幅。文字サイズにもよるが5ぐらいがデフォルトだと限界？
 	const int high = 3;	//高さ
 	const int size = item *2 ;	//枠の数。基本単語数の2倍?
-	int read_item;	//読み取った単語数
+	int line;	//読み取った単語数
 	int temp[item];
 	char str[size][99];	//一時保存用配列
 	
 	/*構造体配列*/
 	struct word_d word[256];
 	
+	/*fpを引数として渡し、返す*/
 	file(&fp,word);
 	
 	/*行数カウント*/
-	char buf[256];
-	int line=0;
-	rewind(fp);
+	char buf[256];	//一行最大文字数
+	line=0;
+	rewind(fp);		//ファイルポインタをファイルの先頭に戻す。
 	while(fgets(buf,256,fp)!=NULL)
 	{
 		line++;
 	}
-	read_item=line;
 	
+	/*問題ランダム*/
 	srand((unsigned)time(NULL));
 	for(i=0;i<item;i++)
 	{
-		temp[i]=(int)(rand()*(double)read_item/(double)RAND_MAX);
+		temp[i]=(int)(rand()*(double)line/(double)RAND_MAX);
 		for(j=i-1;j>-1;j--)
 		{
 			if(temp[i]==temp[j])
@@ -131,7 +132,7 @@ int main()
 			}else break;
 		}
 		cnt++;
-		switch(check_answer(str,word,ans,ans1,read_item))
+		switch(check_answer(str,word,ans,ans1,line))
 		{
 			/*正解*/
 			case 0:
