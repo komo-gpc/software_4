@@ -1,17 +1,10 @@
-/*
-・表示問題の抽出(重み付け?)
-・幅調整
-・メモリ関連。動的確保
-・同じ行に表示？
-・行数カウント関数か？
-*/
-
-
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<sys/time.h>
-#include<time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <sys/time.h>
+#include <unistd.h>
+#define  ESC    0x1B
 
 /*構造体定義*/
 struct word_d
@@ -26,16 +19,223 @@ struct word_d
 /*時間計測用構造体*/
 struct timeval start,end;
 
+struct kiroku{
+	int kotae;
+	int s;
+};
+
+struct kiroku math[10][10];
+
+
 /*プロトタイプ宣言*/
+void view(int *x,int *y,int xo,int yo);
+void keisan(void);
+void shuffle(int array[], int size);
+void ans_view(int *x,int *y);
 void shuffle_ch(char [][99], int);
 void shuffle_num(int [],int);
 int check_answer(char [][99],struct word_d[],int,int,int);
 void display(char [][99],int,int);
 void timer();
 void file(FILE **,struct word_d[]);
+int eigo();
+
+int choice;
+int i=0,k=0;
 
 
-int main()
+int main(){
+	system("clear");
+	char str[100];
+	
+	while(1){	
+			while(1){
+			printf("モードを選択してください\n");
+			printf("1---100マス計算\n");
+			printf("2---英語\n");
+//			printf("3---検索\n");
+//			printf("4---閲覧\n");
+			printf("5---終了\n");
+			printf("----->");
+			scanf("%s",str);
+			
+			if(strlen(str)==1){
+				if(strcmp(str,"1")==0){
+					choice=1;
+					break;
+					
+				}else if(strcmp(str,"2")==0){
+					choice=2;
+					eigo();
+					break;
+					/*
+				}else if(strcmp(str,"3")==0){
+					choice=3;
+					break;
+				}else if(strcmp(str,"4")==0){
+					choice=4;
+					break;
+					*/
+				}else if(strcmp(str,"5")==0){
+					choice=5;
+					break;
+				}
+			}else{
+				printf("error\n\n");
+			}
+		}
+	
+		switch(choice){
+			case 1:
+				srand(time(NULL));	//srand()でrand()に初期値として現在時刻をセット
+				keisan();
+				break;
+			case 2:
+				break;
+/*
+			case 3:
+		    break;
+
+			case 4:
+				break;
+*/
+			case 5:
+				exit(0);
+				break;
+			default:
+				printf("無効な入力です\n");
+				break;
+		  }
+	}
+}
+
+void keisan()
+{
+	int a[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+	int b[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+	int size = 10;
+	int ans;
+	float miss=0;
+	char enter;
+
+	system("clear");
+	//math[10][10]を初期化
+	for(i=0;i<10;i++){
+		for(k=0;k<10;k++){
+			math[i][k].kotae=0;
+			math[i][k].s=0;
+		}
+	}
+
+	//srand()でrand()に初期値として現在時刻をセット
+	srand(time(NULL));
+
+	struct timeval s,e;
+
+	printf("エンターキーを押すと開始します。\n");
+	scanf("%c",&enter);
+	while(1){
+		if(enter=='\n');
+		break;
+	}
+  system("clear");	
+
+	gettimeofday(&s,NULL);
+	
+//	printf("10 ×  10 \n");
+
+    shuffle(a, size);
+    shuffle(b, size);
+	for(i=0;i<10;i++){
+		for(k=0;k<10;k++){
+		  view(a,b,k,i);
+			printf("%d ×  %d =",a[k],b[i]);
+		//intput	
+		//
+			scanf("%d",&ans);
+
+			//正誤判定
+			if(a[k]*b[i]!=ans){
+				math[i][k].s=1;
+				miss++;
+			}
+			printf("%d\n",ans);
+			math[i][k].kotae=ans;
+			system("clear");
+		}
+	}
+	ans_view(a,b);
+	printf("正答率は %0.2f%% です。\n",100.0*(1.0-miss/100.0));
+  gettimeofday(&e,NULL);
+  printf("タイムは %.2f秒 でした。\n", (e.tv_sec - s.tv_sec) + (e.tv_usec -s.tv_usec)*1.0E-6);
+	
+}
+
+void shuffle(int array[], int size)
+{
+    int i = size;
+    while (i > 1) {
+        int j = rand() % i;
+        i--;
+        int t = array[i];
+        array[i] = array[j];
+        array[j] = t;
+    }
+}
+
+
+void view(int *x,int *y ,int xo, int yo)
+{
+	int n,m;
+	printf("   ");
+	for(n=0;n<10;n++) {
+					if(n==xo){
+									printf("%c[33m%3d%c[39m ",ESC,x[n],ESC);
+					}else {
+									printf("%3d ",x[n]);
+					}
+
+	}
+		printf("\n");
+	for(n=0;n<24;n++) printf("ー");
+		printf("\n");
+	for(n=0;n<10;n++){
+					if(n==yo){
+									printf("%c[33m%3d%c[39m",ESC,y[n],ESC);
+					}else	{
+									printf("%3d",y[n]);
+					}
+					printf("|");
+		
+		//ans view
+		for(m=0;m<10;m++) printf("%3d ",math[n][m].kotae);
+		printf("\n");
+	}
+}
+
+void ans_view(int *x,int *y)
+{
+	int n,m;
+	printf("   ");
+	for(n=0;n<10;n++) printf("%3d ",x[n]);
+	printf("\n");
+	for(n=0;n<24;n++) printf("ー");
+	printf("\n");
+	for(n=0;n<10;n++){
+		printf("%3d ",y[n]);
+		//ans view
+		for(m=0;m<10;m++){
+						if(math[n][m].s==1){
+							printf("%c[31m%3d%c[39m ",ESC,math[n][m].kotae,ESC);
+						}else{
+							printf("%3d ",math[n][m].kotae);
+						}
+		}
+		printf("\n");
+	}
+}
+
+int eigo()
 {
 	int i,j,ans,ans1;
 	/*正答率計算用変数*/
@@ -118,6 +318,7 @@ int main()
 	while(i<item)
 	{
 		/*表示*/
+		system("clear");
 		display(str,wide,high);
 		printf("答えを入力してください\n");
 		fflush(stdout);
